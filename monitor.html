@@ -1,9 +1,113 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <base target="_top">
-  </head>
-  <body>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor Accelerometer Realtime</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+        .card { border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        .input-group { margin-bottom: 10px; display: flex; gap: 10px;}
+        input { flex: 1; padding: 8px; }
+        button { padding: 8px 15px; background-color: #2196F3; color: white; border: none; cursor: pointer;}
+        .data-display { display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; margin-bottom: 10px;}
+    </style>
+</head>
+<body>
+
+    <h2>Dashboard Monitor Realtime</h2>
     
-  </body>
+    <div class="card">
+        <div class="input-group">
+            <input type="text" id="baseUrl" value="https://script.google.com/macros/s/AKfycbwlmbxR4bYbEiMRTbr56RUT5Ag1LxsD1JFxYH4UAAWCC2VpFUtHEPuE9Gmp3HtJULUP/exec">
+        </div>
+        <div class="input-group">
+            <input type="text" id="deviceId" value="dev-001" placeholder="Device ID">
+            <button id="btnFetch">Mulai Pantau</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="data-display">
+            <div style="color: red;">X: <span id="dispX">0</span></div>
+            <div style="color: blue;">Y: <span id="dispY">0</span></div>
+            <div style="color: green;">Z: <span id="dispZ">0</span></div>
+        </div>
+        <canvas id="accelChart"></canvas>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('accelChart').getContext('2d');
+        const maxDataPoints = 20; // Batas jumlah titik di grafik
+
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    { label: 'Sumbu X', borderColor: 'red', data: [], tension: 0.1 },
+                    { label: 'Sumbu Y', borderColor: 'blue', data: [], tension: 0.1 },
+                    { label: 'Sumbu Z', borderColor: 'green', data: [], tension: 0.1 }
+                ]
+            },
+            options: { animation: false, scales: { y: { min: -15, max: 15 } } }
+        });
+
+        let fetchInterval;
+
+        document.getElementById('btnFetch').addEventListener('click', () => {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const deviceId = document.getElementById('deviceId').value;
+
+            if (!baseUrl) return alert('Isi Base URL!');
+
+            const btn = document.getElementById('btnFetch');
+            if (btn.innerText === 'Mulai Pantau') {
+                btn.innerText = 'Berhenti';
+                btn.style.backgroundColor = '#f44336';
+                fetchInterval = setInterval(() => fetchLatestData(baseUrl, deviceId), 2000); // Tarik data tiap 2 detik
+            } else {
+                btn.innerText = 'Mulai Pantau';
+                btn.style.backgroundColor = '#2196F3';
+                clearInterval(fetchInterval);
+            }
+        });
+
+        async function fetchLatestData(baseUrl, deviceId) {
+            try {
+                // Sesuai kontrak API: GET {{BASE_URL}}/telemetry/accel/latest?device_id=dev-001
+                const response = await fetch(`${baseUrl}/telemetry/accel/latest?device_id=${deviceId}`);
+                const result = await response.json();
+
+                if (result.ok && result.data) {
+                    const data = result.data;
+                    
+                    // Update teks angka
+                    document.getElementById('dispX').innerText = data.x;
+                    document.getElementById('dispY').innerText = data.y;
+                    document.getElementById('dispZ').innerText = data.z;
+
+                    // Format waktu untuk label grafik
+                    const timeLabel = new Date(data.t).toLocaleTimeString();
+
+                    // Update grafik
+                    chart.data.labels.push(timeLabel);
+                    chart.data.datasets[0].data.push(data.x);
+                    chart.data.datasets[1].data.push(data.y);
+                    chart.data.datasets[2].data.push(data.z);
+
+                    // Buang data terlama agar grafik tidak penuh
+                    if (chart.data.labels.length > maxDataPoints) {
+                        chart.data.labels.shift();
+                        chart.data.datasets.forEach(dataset => dataset.data.shift());
+                    }
+                    chart.update();
+                }
+            } catch (error) {
+                console.error("Gagal mengambil data:", error);
+            }
+        }
+    </script>
+</body>
 </html>

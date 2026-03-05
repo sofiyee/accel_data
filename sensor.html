@@ -1,9 +1,143 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <base target="_top">
-  </head>
-  <body>
-    
-  </body>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Accelerometer</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 400px; margin: auto; }
+        .card { border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        button { padding: 10px; width: 100%; margin-top: 10px; font-size: 16px; cursor: pointer; }
+        .input-group { margin-bottom: 10px; }
+        .input-group input { width: 100%; padding: 8px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+
+    <h2>Sensor Pengirim</h2>
+    <div class="card">
+        <div class="input-group">
+            <label>Base URL GAS:</label>
+            <input type="text" id="baseUrl" value="https://script.google.com/macros/s/AKfycbwlmbxR4bYbEiMRTbr56RUT5Ag1LxsD1JFxYH4UAAWCC2VpFUtHEPuE9Gmp3HtJULUP/exec">
+        </div>
+        <div class="input-group">
+            <label>Device ID:</label>
+            <input type="text" id="deviceId" value="dev-001">
+        </div>
+        <button id="btnStart" style="background-color: #4CAF50; color: white;">Mulai Sensor & Kirim</button>
+        <button id="btnStop" style="background-color: #f44336; color: white; display: none;">Hentikan</button>
+    </div>
+
+    <div class="card" id="statusArea">
+        <p>Status: <span id="status">Menunggu...</span></p>
+        <p>X: <span id="valX">0.00</span></p>
+        <p>Y: <span id="valY">0.00</span></p>
+        <p>Z: <span id="valZ">0.00</span></p>
+        <p>Total Batch Terkirim: <span id="batchCount">0</span></p>
+    </div>
+
+    <script>
+        let isRunning = false;
+        let batchData = [];
+        let batchInterval;
+        let batchCount = 0;
+        let currentX = 0, currentY = 0, currentZ = 0;
+
+        const btnStart = document.getElementById('btnStart');
+        const btnStop = document.getElementById('btnStop');
+
+        btnStart.addEventListener('click', async () => {
+            // Meminta izin sensor untuk iOS 13+
+            if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                try {
+                    const permission = await DeviceMotionEvent.requestPermission();
+                    if (permission !== 'granted') {
+                        alert('Izin sensor ditolak');
+                        return;
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+            startSensor();
+        });
+
+        btnStop.addEventListener('click', stopSensor);
+
+        function handleMotion(event) {
+            currentX = event.accelerationIncludingGravity.x || 0;
+            currentY = event.accelerationIncludingGravity.y || 0;
+            currentZ = event.accelerationIncludingGravity.z || 0;
+
+            document.getElementById('valX').innerText = currentX.toFixed(2);
+            document.getElementById('valY').innerText = currentY.toFixed(2);
+            document.getElementById('valZ').innerText = currentZ.toFixed(2);
+
+            // Simpan ke array batch
+            batchData.push({
+                t: new Date().toISOString(),
+                x: parseFloat(currentX.toFixed(2)),
+                y: parseFloat(currentY.toFixed(2)),
+                z: parseFloat(currentZ.toFixed(2))
+            });
+        }
+
+        function startSensor() {
+            const baseUrl = document.getElementById('baseUrl').value;
+            if (!baseUrl) return alert("Isi Base URL terlebih dahulu!");
+
+            isRunning = true;
+            btnStart.style.display = 'none';
+            btnStop.style.display = 'block';
+            document.getElementById('status').innerText = 'Merekam & Mengirim...';
+
+            window.addEventListener('devicemotion', handleMotion);
+
+            // Kirim batch setiap 3 detik
+            batchInterval = setInterval(() => sendBatch(baseUrl), 3000);
+        }
+
+        function stopSensor() {
+            isRunning = false;
+            btnStart.style.display = 'block';
+            btnStop.style.display = 'none';
+            document.getElementById('status').innerText = 'Berhenti';
+            
+            window.removeEventListener('devicemotion', handleMotion);
+            clearInterval(batchInterval);
+            batchData = []; // Bersihkan sisa data
+        }
+
+        async function sendBatch(baseUrl) {
+            if (batchData.length === 0) return;
+
+            const payload = {
+                device_id: document.getElementById('deviceId').value,
+                ts: new Date().toISOString(),
+                samples: [...batchData] // Copy data
+            };
+            
+            // Kosongkan array setelah dicopy
+            batchData = []; 
+
+            try {
+                // Sesuai kontrak API: POST {{BASE_URL}}/telemetry/accel
+                const response = await fetch(`${baseUrl}/telemetry/accel`, {
+                    method: 'POST',
+                    // GAS menangani JSON POST dengan baik jika Content-Type diset text/plain agar menghindari CORS preflight OPTIONS error yang rumit di GAS
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                if (result.ok) {
+                    batchCount++;
+                    document.getElementById('batchCount').innerText = batchCount;
+                }
+            } catch (error) {
+                console.error('Error pengiriman:', error);
+            }
+        }
+    </script>
+</body>
 </html>
