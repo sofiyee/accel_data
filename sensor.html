@@ -4,50 +4,238 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sensor Accelerometer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; padding: 20px; max-width: 400px; margin: auto; }
-        .card { border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-        button { padding: 10px; width: 100%; margin-top: 10px; font-size: 16px; cursor: pointer; }
-        .input-group { margin-bottom: 10px; }
-        .input-group input { width: 100%; padding: 8px; box-sizing: border-box; }
+        :root {
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --shadow-soft: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            --border-radius: 1.2rem;
+        }
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            line-height: 1.5;
+            padding: 1.5rem;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .sensor-container {
+            width: 100%;
+            max-width: 450px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        h1 {
+            text-align: center;
+            font-size: 1.75rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-soft);
+            padding: 1.5rem;
+        }
+        .device-info {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 1.25rem;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid #cbd5e1;
+            border-radius: 0.75rem;
+        }
+        .device-info-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        .device-info-value {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        button {
+            width: 100%;
+            padding: 1rem;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s, background 0.2s;
+        }
+        button:active { transform: scale(0.98); }
+        #btnStart {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        #btnStart:hover { background: linear-gradient(135deg, #059669, #047857); }
+        #btnStop {
+            background: linear-gradient(135deg, #f43f5e, #e11d48);
+            color: white;
+            box-shadow: 0 4px 12px rgba(244, 63, 94, 0.3);
+            display: none;
+        }
+        #btnStop:hover { background: linear-gradient(135deg, #e11d48, #be123c); }
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .status-badge {
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.3rem 0.75rem;
+            border-radius: 999px;
+            background: #e2e8f0;
+            color: var(--text-secondary);
+        }
+        .status-badge.active {
+            background: rgba(16, 185, 129, 0.15);
+            color: #059669;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .data-item {
+            background: rgba(255, 255, 255, 0.5);
+            padding: 1rem 0.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+        .axis-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+        .digital-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .val-x { background: linear-gradient(135deg, #3b82f6, #8b5cf6); }
+        .val-y { background: linear-gradient(135deg, #f43f5e, #ec4899); }
+        .val-z { background: linear-gradient(135deg, #f59e0b, #fcd34d); }
+        .batch-info {
+            text-align: center;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.4);
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+        }
+        .batch-info span {
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .log {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0,0,0,0.05);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            max-height: 180px;
+            overflow-y: auto;
+            text-align: left;
+        }
     </style>
 </head>
 <body>
 
-    <h2>Sensor Pengirim</h2>
-    <div class="card">
-        <div class="input-group">
-            <label>Base URL GAS:</label>
-            <input type="text" id="baseUrl" value="https://script.google.com/macros/s/AKfycbwlmbxR4bYbEiMRTbr56RUT5Ag1LxsD1JFxYH4UAAWCC2VpFUtHEPuE9Gmp3HtJULUP/exec">
+    <div class="sensor-container">
+        <h1>📱 Accelerometer Sensor</h1>
+        <div class="glass-card">
+            <div class="device-info">
+                <span class="device-info-label">Device ID</span>
+                <span class="device-info-value">dev-001</span>
+            </div>
+            <button id="btnStart">Mulai Rekam & Kirim</button>
+            <button id="btnStop">Hentikan Pengiriman</button>
         </div>
-        <div class="input-group">
-            <label>Device ID:</label>
-            <input type="text" id="deviceId" value="dev-001">
+        <div class="glass-card">
+            <div class="status-header">
+                <span style="font-weight: 600; color: var(--text-primary);">Status Sensor</span>
+                <span class="status-badge" id="statusBadge">Menunggu...</span>
+            </div>
+           
+            <div class="data-grid">
+                <div class="data-item">
+                    <div class="axis-label">X AXIS</div>
+                    <div class="digital-value val-x" id="valX">0.00</div>
+                </div>
+                <div class="data-item">
+                    <div class="axis-label">Y AXIS</div>
+                    <div class="digital-value val-y" id="valY">0.00</div>
+                </div>
+                <div class="data-item">
+                    <div class="axis-label">Z AXIS</div>
+                    <div class="digital-value val-z" id="valZ">0.00</div>
+                </div>
+            </div>
+            <div class="batch-info">
+                Total Batch Terkirim: <span id="batchCount">0</span>
+            </div>
+            <div class="log" id="logArea"></div>
         </div>
-        <button id="btnStart" style="background-color: #4CAF50; color: white;">Mulai Sensor & Kirim</button>
-        <button id="btnStop" style="background-color: #f44336; color: white; display: none;">Hentikan</button>
-    </div>
-
-    <div class="card" id="statusArea">
-        <p>Status: <span id="status">Menunggu...</span></p>
-        <p>X: <span id="valX">0.00</span></p>
-        <p>Y: <span id="valY">0.00</span></p>
-        <p>Z: <span id="valZ">0.00</span></p>
-        <p>Total Batch Terkirim: <span id="batchCount">0</span></p>
     </div>
 
     <script>
+        const BASE_URL = "https://script.google.com/macros/s/AKfycbwIsfcxb6ZrRD90-nKCG5WXY1xPI1FntiWtybhtpjMLurXhaouR290hzhRNEldfH9Q/exec";
+        const DEVICE_ID = "dev-001";
+
         let isRunning = false;
         let batchData = [];
         let batchInterval;
         let batchCount = 0;
-        let currentX = 0, currentY = 0, currentZ = 0;
 
         const btnStart = document.getElementById('btnStart');
         const btnStop = document.getElementById('btnStop');
+        const statusBadge = document.getElementById('statusBadge');
+        const logArea = document.getElementById('logArea');
+
+        function log(text, type = 'info') {
+            const time = new Date().toLocaleTimeString('id-ID');
+            logArea.innerHTML += `<div>[${time}] ${text}</div>`;
+            logArea.scrollTop = logArea.scrollHeight;
+            console.log(text);
+        }
 
         btnStart.addEventListener('click', async () => {
-            // Meminta izin sensor untuk iOS 13+
             if (typeof DeviceMotionEvent.requestPermission === 'function') {
                 try {
                     const permission = await DeviceMotionEvent.requestPermission();
@@ -65,79 +253,76 @@
         btnStop.addEventListener('click', stopSensor);
 
         function handleMotion(event) {
-            currentX = event.accelerationIncludingGravity.x || 0;
-            currentY = event.accelerationIncludingGravity.y || 0;
-            currentZ = event.accelerationIncludingGravity.z || 0;
+            if (!isRunning) return;
+            const x = event.accelerationIncludingGravity?.x || 0;
+            const y = event.accelerationIncludingGravity?.y || 0;
+            const z = event.accelerationIncludingGravity?.z || 0;
 
-            document.getElementById('valX').innerText = currentX.toFixed(2);
-            document.getElementById('valY').innerText = currentY.toFixed(2);
-            document.getElementById('valZ').innerText = currentZ.toFixed(2);
+            document.getElementById('valX').innerText = x.toFixed(2);
+            document.getElementById('valY').innerText = y.toFixed(2);
+            document.getElementById('valZ').innerText = z.toFixed(2);
 
-            // Simpan ke array batch
             batchData.push({
-                t: new Date().toISOString(),
-                x: parseFloat(currentX.toFixed(2)),
-                y: parseFloat(currentY.toFixed(2)),
-                z: parseFloat(currentZ.toFixed(2))
+                t: Date.now(),
+                x: parseFloat(x.toFixed(2)),
+                y: parseFloat(y.toFixed(2)),
+                z: parseFloat(z.toFixed(2))
             });
         }
 
         function startSensor() {
-            const baseUrl = document.getElementById('baseUrl').value;
-            if (!baseUrl) return alert("Isi Base URL terlebih dahulu!");
-
             isRunning = true;
             btnStart.style.display = 'none';
             btnStop.style.display = 'block';
-            document.getElementById('status').innerText = 'Merekam & Mengirim...';
-
+            statusBadge.innerText = 'Online & Mengirim...';
+            statusBadge.classList.add('active');
+            log("✅ Sensor diaktifkan");
             window.addEventListener('devicemotion', handleMotion);
-
-            // Kirim batch setiap 3 detik
-            batchInterval = setInterval(() => sendBatch(baseUrl), 3000);
+            batchInterval = setInterval(sendBatch, 2500);
         }
 
         function stopSensor() {
             isRunning = false;
             btnStart.style.display = 'block';
             btnStop.style.display = 'none';
-            document.getElementById('status').innerText = 'Berhenti';
-            
+            statusBadge.innerText = 'Berhenti';
+            statusBadge.classList.remove('active');
             window.removeEventListener('devicemotion', handleMotion);
             clearInterval(batchInterval);
-            batchData = []; // Bersihkan sisa data
+            if (batchData.length > 0) sendBatch();
+            log("⛔ Sensor dihentikan");
         }
 
-        async function sendBatch(baseUrl) {
-            if (batchData.length === 0) return;
+        async function sendBatch() {
+        if (batchData.length === 0) return;
 
-            const payload = {
-                device_id: document.getElementById('deviceId').value,
-                ts: new Date().toISOString(),
-                samples: [...batchData] // Copy data
-            };
-            
-            // Kosongkan array setelah dicopy
-            batchData = []; 
+        const payload = {
+            path: "telemetry/accel",
+            device_id: DEVICE_ID,
+            ts: new Date().toISOString(),
+            samples: [...batchData]
+        };
 
-            try {
-                // Sesuai kontrak API: POST {{BASE_URL}}/telemetry/accel
-                const response = await fetch(`${baseUrl}/telemetry/accel`, {
-                    method: 'POST',
-                    // GAS menangani JSON POST dengan baik jika Content-Type diset text/plain agar menghindari CORS preflight OPTIONS error yang rumit di GAS
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload)
-                });
-                
-                const result = await response.json();
-                if (result.ok) {
-                    batchCount++;
-                    document.getElementById('batchCount').innerText = batchCount;
-                }
-            } catch (error) {
-                console.error('Error pengiriman:', error);
-            }
+        const currentBatchSize = batchData.length;
+        batchData = [];
+
+        try {
+            const response = await fetch(BASE_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            batchCount += currentBatchSize;
+            document.getElementById('batchCount').innerText = batchCount;
+            log(`✅ Batch terkirim (${currentBatchSize} samples)`);
+            log(`   Payload size: ${JSON.stringify(payload).length} bytes`);
+
+        } catch (error) {
+            log(`❌ Fetch error: ${error.message}`, 'error');
         }
+    }
     </script>
 </body>
 </html>

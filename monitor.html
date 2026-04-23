@@ -3,111 +3,256 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor Accelerometer Realtime</title>
+    <title>Accelerometer Monitor - Soft Light Mode</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
-        .card { border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-        .input-group { margin-bottom: 10px; display: flex; gap: 10px;}
-        input { flex: 1; padding: 8px; }
-        button { padding: 8px 15px; background-color: #2196F3; color: white; border: none; cursor: pointer;}
-        .data-display { display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; margin-bottom: 10px;}
+        /* CSS TETAP SAMA PERSIS SEPERTI PUNYA KAMU */
+        :root {
+            --text-primary: #1e293b; 
+            --text-secondary: #64748b; 
+            --color-xaxis: #3b82f6; 
+            --color-yaxis: #f43f5e; 
+            --color-zaxis: #f59e0b; 
+            --color-online: #10b981; 
+            --shadow-soft: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            --border-radius: 1.2rem; 
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            line-height: 1.5;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .dashboard-container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.65); 
+            backdrop-filter: blur(16px); 
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.8); 
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-soft);
+        }
+
+        .dashboard-header { display: grid; grid-template-columns: 1fr auto; align-items: center; padding-bottom: 1rem; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .header-title-group { display: flex; align-items: center; gap: 1.5rem; }
+        .header-title-group h1 { font-size: 1.875rem; font-weight: 700; letter-spacing: -0.02em;}
+        .device-info { display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.875rem; font-weight: 500;}
+        .status-container { display: flex; align-items: center; gap: 1.5rem; }
+        .live-status { display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.875rem; font-weight: 500;}
+        
+        .live-status-dot {
+            width: 8px; height: 8px;
+            background-color: var(--color-online);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--color-online); 
+        }
+
+        .online-label {
+            display: flex; align-items: center; gap: 0.5rem;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
+            color: #059669; 
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .header-legend { display: flex; align-items: center; gap: 1.5rem; padding: 1rem 0; }
+        .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: var(--text-secondary); font-weight: 600; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+        
+        .legend-dot.xaxis { background: linear-gradient(135deg, #60a5fa, #2563eb); }
+        .legend-dot.yaxis { background: linear-gradient(135deg, #fb7185, #e11d48); }
+        .legend-dot.zaxis { background: linear-gradient(135deg, #fbbf24, #d97706); }
+
+        .digital-display-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+
+        .data-card {
+            padding: 2.5rem 2rem; text-align: center; display: flex; flex-direction: column;
+            gap: 0.5rem; transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .data-card:hover { transform: translateY(-4px); box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.1); }
+
+        .digital-value {
+            font-size: 3.5rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .val-x { background: linear-gradient(135deg, #3b82f6, #8b5cf6); } 
+        .val-y { background: linear-gradient(135deg, #f43f5e, #ec4899); } 
+        .val-z { background: linear-gradient(135deg, #f59e0b, #fcd34d); } 
+
+        .axis-label { font-size: 0.875rem; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.1em; }
+
+        .graph-section { display: flex; flex-direction: column; gap: 1.5rem; }
+        .graph-wrapper { padding: 2rem; height: 420px; }
+
+        .footer-info {
+            display: flex; justify-content: flex-end; align-items: center; gap: 1rem;
+            color: var(--text-secondary); font-size: 0.875rem; font-weight: 500;
+        }
+        
+        .user-profile { display: flex; align-items: center; gap: 0.75rem; }
+        .profile-avatar {
+            width: 36px; height: 36px; background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+            color: #64748b; border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            font-weight: 700; font-size: 1.25rem; border: 2px solid white;
+        }
     </style>
 </head>
 <body>
 
-    <h2>Dashboard Monitor Realtime</h2>
-    
-    <div class="card">
-        <div class="input-group">
-            <input type="text" id="baseUrl" value="https://script.google.com/macros/s/AKfycbwlmbxR4bYbEiMRTbr56RUT5Ag1LxsD1JFxYH4UAAWCC2VpFUtHEPuE9Gmp3HtJULUP/exec">
+<div class="dashboard-container">
+    <header class="graph-section">
+        <div class="dashboard-header">
+            <div class="header-title-group">
+                <h1>Accelerometer</h1>
+                <div class="device-info">
+                    <span style="font-size: 1.25rem;">&#x1F5B5;</span> dev-001
+                </div>
+            </div>
+            <div class="status-container">
+                <div class="live-status">
+                    <span class="live-status-dot"></span> Live
+                </div>
+                <div class="online-label" id="statusLabel">
+                    <span class="live-status-dot" style="box-shadow: none;"></span> ONLINE
+                </div>
+            </div>
         </div>
-        <div class="input-group">
-            <input type="text" id="deviceId" value="dev-001" placeholder="Device ID">
-            <button id="btnFetch">Mulai Pantau</button>
+
+        <div class="header-legend">
+            <div class="legend-item"><span class="legend-dot xaxis"></span>X-Axis</div>
+            <div class="legend-item"><span class="legend-dot yaxis"></span>Y-Axis</div>
+            <div class="legend-item"><span class="legend-dot zaxis"></span>Z-Axis</div>
         </div>
-    </div>
+    </header>
 
-    <div class="card">
-        <div class="data-display">
-            <div style="color: red;">X: <span id="dispX">0</span></div>
-            <div style="color: blue;">Y: <span id="dispY">0</span></div>
-            <div style="color: green;">Z: <span id="dispZ">0</span></div>
+    <main class="digital-display-grid">
+        <div class="data-card glass-card">
+            <div class="digital-value val-x" id="dispX">0.00</div>
+            <div class="axis-label">X AXIS</div>
         </div>
-        <canvas id="accelChart"></canvas>
-    </div>
+        <div class="data-card glass-card">
+            <div class="digital-value val-y" id="dispY">0.00</div>
+            <div class="axis-label">Y AXIS</div>
+        </div>
+        <div class="data-card glass-card">
+            <div class="digital-value val-z" id="dispZ">0.00</div>
+            <div class="axis-label">Z AXIS</div>
+        </div>
+    </main>
 
-    <script>
-        const ctx = document.getElementById('accelChart').getContext('2d');
-        const maxDataPoints = 20; // Batas jumlah titik di grafik
+    <section class="graph-section">
+        <div class="graph-wrapper glass-card">
+            <canvas id="accelChart"></canvas>
+        </div>
 
-        const chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [
-                    { label: 'Sumbu X', borderColor: 'red', data: [], tension: 0.1 },
-                    { label: 'Sumbu Y', borderColor: 'blue', data: [], tension: 0.1 },
-                    { label: 'Sumbu Z', borderColor: 'green', data: [], tension: 0.1 }
-                ]
-            },
-            options: { animation: false, scales: { y: { min: -15, max: 15 } } }
-        });
+        <footer class="footer-info">
+            <div class="user-profile">
+                <div class="profile-avatar">&#128100;</div> 
+            </div>
+            <span id="lastUpdate">Last update: --:--:--</span>
+        </footer>
+    </section>
+</div>
 
-        let fetchInterval;
+<script>
+    const BASE_URL = "https://script.google.com/macros/s/AKfycbwIsfcxb6ZrRD90-nKCG5WXY1xPI1FntiWtybhtpjMLurXhaouR290hzhRNEldfH9Q/exec"; 
+    const DEVICE_ID = "dev-001";
+    const MAX_DATA_POINTS = 20;
 
-        document.getElementById('btnFetch').addEventListener('click', () => {
-            const baseUrl = document.getElementById('baseUrl').value;
-            const deviceId = document.getElementById('deviceId').value;
+    // Inisialisasi Chart (sama seperti sebelumnya)
+    const ctx = document.getElementById('accelChart').getContext('2d');
+    let gradX = ctx.createLinearGradient(0, 0, 0, 350);
+    gradX.addColorStop(0, 'rgba(59, 130, 246, 0.4)');
+    gradX.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
 
-            if (!baseUrl) return alert('Isi Base URL!');
+    let gradY = ctx.createLinearGradient(0, 0, 0, 350);
+    gradY.addColorStop(0, 'rgba(244, 63, 94, 0.4)');
+    gradY.addColorStop(1, 'rgba(244, 63, 94, 0.0)');
 
-            const btn = document.getElementById('btnFetch');
-            if (btn.innerText === 'Mulai Pantau') {
-                btn.innerText = 'Berhenti';
-                btn.style.backgroundColor = '#f44336';
-                fetchInterval = setInterval(() => fetchLatestData(baseUrl, deviceId), 2000); // Tarik data tiap 2 detik
-            } else {
-                btn.innerText = 'Mulai Pantau';
-                btn.style.backgroundColor = '#2196F3';
-                clearInterval(fetchInterval);
-            }
-        });
+    let gradZ = ctx.createLinearGradient(0, 0, 0, 350);
+    gradZ.addColorStop(0, 'rgba(245, 158, 11, 0.4)');
+    gradZ.addColorStop(1, 'rgba(245, 158, 11, 0.0)');
 
-        async function fetchLatestData(baseUrl, deviceId) {
-            try {
-                // Sesuai kontrak API: GET {{BASE_URL}}/telemetry/accel/latest?device_id=dev-001
-                const response = await fetch(`${baseUrl}/telemetry/accel/latest?device_id=${deviceId}`);
-                const result = await response.json();
+    const initialData = Array(MAX_DATA_POINTS).fill(0);
+    const initialLabels = Array(MAX_DATA_POINTS).fill('');
 
-                if (result.ok && result.data) {
-                    const data = result.data;
-                    
-                    // Update teks angka
-                    document.getElementById('dispX').innerText = data.x;
-                    document.getElementById('dispY').innerText = data.y;
-                    document.getElementById('dispZ').innerText = data.z;
-
-                    // Format waktu untuk label grafik
-                    const timeLabel = new Date(data.t).toLocaleTimeString();
-
-                    // Update grafik
-                    chart.data.labels.push(timeLabel);
-                    chart.data.datasets[0].data.push(data.x);
-                    chart.data.datasets[1].data.push(data.y);
-                    chart.data.datasets[2].data.push(data.z);
-
-                    // Buang data terlama agar grafik tidak penuh
-                    if (chart.data.labels.length > maxDataPoints) {
-                        chart.data.labels.shift();
-                        chart.data.datasets.forEach(dataset => dataset.data.shift());
-                    }
-                    chart.update();
-                }
-            } catch (error) {
-                console.error("Gagal mengambil data:", error);
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [...initialLabels],
+            datasets: [
+                { label: 'X-Axis', data: [...initialData], borderColor: '#3b82f6', backgroundColor: gradX, borderWidth: 3, tension: 0.4, fill: true },
+                { label: 'Y-Axis', data: [...initialData], borderColor: '#f43f5e', backgroundColor: gradY, borderWidth: 3, tension: 0.4, fill: true },
+                { label: 'Z-Axis', data: [...initialData], borderColor: '#f59e0b', backgroundColor: gradZ, borderWidth: 3, tension: 0.4, fill: true }
+            ]
+        },
+        options: {
+            maintainAspectRatio: false,
+            responsive: true,
+            animation: { duration: 400 },
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#94a3b8' } },
+                y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#94a3b8' } }
             }
         }
-    </script>
+    });
+
+    // Logic Fetch Sederhana (mirip temenmu)
+    async function fetchRealtimeData() {
+        try {
+            const url = `${BASE_URL}?path=telemetry/accel/latest&device_id=${DEVICE_ID}&t=${Date.now()}`;
+            const response = await fetch(url);
+            const result = await response.json();
+
+            if (result.ok && result.data) {
+                const d = result.data;
+                
+                document.getElementById('dispX').innerText = Number(d.x || 0).toFixed(2);
+                document.getElementById('dispY').innerText = Number(d.y || 0).toFixed(2);
+                document.getElementById('dispZ').innerText = Number(d.z || 0).toFixed(2);
+
+                const timeStr = new Date().toLocaleTimeString('id-ID');
+                document.getElementById('lastUpdate').innerText = `Last update: ${timeStr}`;
+
+                // Update Chart
+                const label = timeStr;
+                chart.data.labels.push(label);
+                chart.data.datasets[0].data.push(d.x || 0);
+                chart.data.datasets[1].data.push(d.y || 0);
+                chart.data.datasets[2].data.push(d.z || 0);
+
+                if (chart.data.labels.length > MAX_DATA_POINTS) {
+                    chart.data.labels.shift();
+                    chart.data.datasets.forEach(ds => ds.data.shift());
+                }
+                chart.update();
+            }
+        } catch (error) {
+            console.error("Fetch gagal:", error);
+        }
+    }
+
+    // Jalankan
+    fetchRealtimeData();
+    setInterval(fetchRealtimeData, 2000);
+</script>
+
 </body>
 </html>
